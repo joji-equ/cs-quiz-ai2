@@ -12,22 +12,26 @@ from json_repair import repair_json
 # ----------------------------
 # Configuration
 # ----------------------------
-# Load API key from secrets (Streamlit Cloud) or .env (local)
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
 
 if not GOOGLE_API_KEY:
-    st.error("❌ Missing GEMINI_API_KEY. Set it in secrets or .env.")
+    st.error("❌ Missing GEMINI_API_KEY. Set it in Streamlit Cloud secrets or .env.")
     st.stop()
 
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash-latest")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 except Exception as e:
     st.error(f"Failed to initialize Gemini: {e}")
     st.stop()
 
 # ----------------------------
-# Custom Styling
+# MUST be the FIRST Streamlit command
+# ----------------------------
+st.set_page_config(page_title="CS Quiz Generator", layout="wide")
+
+# ----------------------------
+# Custom Styling (now safe to call)
 # ----------------------------
 def add_custom_css():
     st.markdown("""
@@ -74,20 +78,19 @@ def add_custom_css():
 add_custom_css()
 
 # ----------------------------
-# Constants
+# Constants & Session State
 # ----------------------------
 CS_TOPICS = [
-    "Object-Oriented Programming (OOP) in Python",
-    "Time and Space Complexity (Big O Notation)",
+    "Object-Oriented Programming (OOP) in Java",
+    "Introduction to Cloud Computing",
     "Fundamentals of Computer Networking",
     "SQL and Relational Database Design",
-    "Recursion and Divide-and-Conquer Algorithms",
-    "Operating System Concepts",
-    "Data Structures: Stacks, Queues, Linked Lists",
-    "Basics of Cybersecurity and Encryption"
+    "Data Strucctures Algorithms",
+    "Responsive Web Applications",
+    "Automata Theory",
+    "Software Engineering and Project Management"
 ]
 
-# Initialize quiz history
 if "quiz_history" not in st.session_state:
     st.session_state.quiz_history = []
 
@@ -134,7 +137,6 @@ def parse_ai_response(response_text):
             return parsed if "questions" in parsed else {"questions": list(parsed.values()) if parsed else []}
         else:
             return {"questions": []}
-
     except Exception:
         return {"questions": []}
 
@@ -266,13 +268,13 @@ def display_interactive_quiz(quiz_data, key_prefix="quiz", topic="Unknown", quiz
             st.balloons()
 
 # ----------------------------
-# Sidebar: History
+# Sidebar: Quiz History
 # ----------------------------
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/860/860792.png", width=40)
     st.subheader("📚 Quiz History")
     if st.session_state.quiz_history:
-        for entry in reversed(st.session_state.quiz_history[-5:]):  # Last 5
+        for entry in reversed(st.session_state.quiz_history[-5:]):
             st.markdown(f"`{entry['score']}` • {entry['type']} • {entry['topic'][:30]}...")
         if st.button("🗑️ Clear", use_container_width=True):
             st.session_state.quiz_history = []
@@ -281,13 +283,12 @@ with st.sidebar:
         st.info("No attempts yet.")
 
 # ----------------------------
-# Main App
+# Main App UI
 # ----------------------------
-st.set_page_config(page_title="CS Quiz Generator", layout="wide")
 st.title("🧠 AI-Powered CS Quiz Generator")
 st.markdown("Upload a PDF or try a random CS topic quiz!")
 
-# --- PDF Upload ---
+# --- PDF Upload Section ---
 st.header("📥 Upload CS PDF")
 uploaded_file = st.file_uploader("Choose a text-based PDF", type="pdf")
 
@@ -308,7 +309,7 @@ if uploaded_file:
     else:
         st.error("Could not extract text. Use a text-based PDF.")
 
-# --- Auto Quiz ---
+# --- Auto-Generated Quiz Section ---
 st.header("🎲 Daily CS Quiz")
 if "auto_topic" not in st.session_state:
     st.session_state.auto_topic = random.choice(CS_TOPICS)
